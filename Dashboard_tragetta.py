@@ -31,6 +31,7 @@ st.markdown("""
         .status-box { padding: 18px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; font-weight: 500; line-height: 1.5; }
         .status-up { background-color: #e6f4ea; color: #137333; border-left: 5px solid #137333; }
         .status-down { background-color: #fce8e6; color: #c5221f; border-left: 5px solid #c5221f; }
+        .status-new { background-color: #e8f0fe; color: #1a73e8; border-left: 5px solid #1a73e8; }
         button[data-baseweb="tab"] { color: #666666 !important; font-size: 16px !important; }
         button[data-baseweb="tab"][aria-selected="true"] { color: #1E4620 !important; font-weight: bold !important; }
         div[data-baseweb="tab-highlight"] { background-color: #1E4620 !important; }
@@ -41,7 +42,6 @@ st.markdown("""
 st.sidebar.header("📥 Carga de Dados")
 arquivo_publicado = st.sidebar.file_uploader("Arraste o seu arquivo Excel (.xlsx):", type=["xlsx"])
 
-# Controlo de Foto de Perfil na Sessão
 if 'foto_b64' not in st.session_state:
     st.session_state['foto_b64'] = None
 
@@ -58,7 +58,6 @@ if st.session_state['foto_b64']:
 else:
     avatar_html = '<div style="min-width:70px; max-width:70px; height:70px; background-color: rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-right:20px;">👤</div>'
 
-# Cabeçalho Principal Estilizado Original
 st.markdown(f"""
     <div class="main-header">
         {avatar_html}
@@ -71,34 +70,40 @@ st.markdown(f"""
 
 if arquivo_publicado is not None:
     try:
-        # Lendo os dados brutos
         df = pd.read_excel(arquivo_publicado)
         
-        # Filtra linhas de Totais e limpa nulos de acordo com o arquivo bruto original
+        # Filtragem padrão de linhas vazias e totais
         df_clean = df[df['Grupo Cliente'].notna() & (df['Grupo Cliente'] != 'Total')].copy()
         
-        # Leitura direta das colunas do seu arquivo bruto
         df_clean['Mês atual'] = df_clean['Mês atual'].fillna(0).astype(float)
         df_clean['Ano Passado'] = df_clean['Ano Passado'].fillna(0).astype(float)
         df_clean['Ano Retrasado'] = df_clean['Ano Retrasado'].fillna(0).astype(float)
-        
-        # Proteção para colunas operacionais caso variem
-        df_clean['Peso Real'] = df_clean['Peso Real'].fillna(0).astype(float) if 'Peso Real' in df_clean.columns else 0.0
-        df_clean['Qtd CTE'] = df_clean['Qtd CTE'].fillna(0).astype(float) if 'Qtd CTE' in df_clean.columns else 0.0
+
+        # Identificação de Clientes Novos (Mês atual > 0 E Ano Passado == 0)
+        df_clean['É Cliente Novo'] = (df_clean['Mês atual'] > 0) & (df_clean['Ano Passado'] == 0)
+        df_novos = df_clean[df_clean['É Cliente Novo']]
+        total_clientes_novos = df_novos.shape[0]
+        faturamento_novos = df_novos['Mês atual'].sum()
 
         # Métricas Globais Dinâmicas
         faturamento_total = df_clean['Mês atual'].sum()
-        peso_total = df_clean['Peso Real'].sum()
-        total_cte = df_clean['Qtd CTE'].sum()
+        faturamento_passado_total = df_clean['Ano Passado'].sum()
+        
+        # Crescimento Global
+        if faturamento_passado_total > 0:
+            crescimento_global = ((faturamento_total - faturamento_passado_total) / faturamento_passado_total) * 100
+            sub_texto_crescimento = f"▲ Crescimento de {crescimento_global:.1f}% vs Ano Passado" if crescimento_global >= 0 else f"▼ Queda de {abs(crescimento_global):.1f}% vs Ano Passado"
+        else:
+            sub_texto_crescimento = "▲ Sem dados de histórico comparativo"
 
-        # Exibição dos Blocos
+        # Exibição dos Blocos Principais
         c1, c2, c3 = st.columns(3)
         with c1: 
-            st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Total Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">▲ Dados Atualizados com Sucesso</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Mês Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">{sub_texto_crescimento}</div></div>', unsafe_allow_html=True)
         with c2: 
-            st.markdown(f'<div class="metric-card blue"><div class="metric-title">Volume Total Movimentado</div><div class="metric-value">{peso_total:,.2f} KG</div><div class="metric-sub" style="color: #0275d8;">Métrica de Carga LTL</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card blue"><div class="metric-title">Novos Clientes Conquistados</div><div class="metric-value">{total_clientes_novos} Novos</div><div class="metric-sub" style="color: #0275d8;">Clientes sem histórico no ano passado</div></div>', unsafe_allow_html=True)
         with c3: 
-            st.markdown(f'<div class="metric-card gold"><div class="metric-title">Total de Conhecimentos (CTe)</div><div class="metric-value">{int(total_cte)} Emissões</div><div class="metric-sub" style="color: #f0ad4e;">Quantidade de Operações</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card gold"><div class="metric-title">Receita de Clientes Novos</div><div class="metric-value">R$ {faturamento_novos:,.2f}</div><div class="metric-sub" style="color: #f0ad4e;">Impacto comercial das novas contas</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -113,18 +118,19 @@ if arquivo_publicado is not None:
             atual = dados_cliente['Mês atual']
             passado = dados_cliente['Ano Passado']
             retrasado = dados_cliente['Ano Retrasado']
-            peso_cli = dados_cliente['Peso Real']
-            cte_cli = dados_cliente['Qtd CTE']
+            es_novo = dados_cliente['É Cliente Novo']
             
-            # Cálculo de evolução real para a caixa de status antiga
-            if passado > 0:
+            # Caixa de Status Inteligente baseada no crescimento ou se é Novo
+            if es_novo:
+                status_html = f'<div class="status-box status-new">⭐ <b>NOVA CONTA CONQUISTADA!</b><br>Este cliente é novo na carteira, trazendo R$ {atual:,.2f} de receita inédita neste período!</div>'
+            elif passado > 0:
                 variacao = ((atual - passado) / passado) * 100
                 if variacao >= 0:
-                    status_html = f'<div class="status-box status-up">📈 <b>DESEMPENHO EM ALTA ({variacao:.1f}%)</b><br>O cliente apresentou crescimento comparado ao ano anterior.</div>'
+                    status_html = f'<div class="status-box status-up">📈 <b>DESEMPENHO EM ALTA ({variacao:.1f}%)</b><br>O cliente apresentou crescimento comparado ao ano passado.</div>'
                 else:
                     status_html = f'<div class="status-box status-down">📉 <b>ALERTA DE QUEDA ({variacao:.1f}%)</b><br>O faturamento atual está abaixo do ano passado.</div>'
             else:
-                status_html = '<div class="status-box status-up">⭐ <b>NOVA CONTA OU SEM HISTÓRICO</b><br>Cliente ativo e operando no período corrente.</div>'
+                status_html = '<div class="status-box status-up">📈 <b>CONTA ATIVA</b><br>Cliente operando normalmente no período corrente.</div>'
 
             col_dados, col_grafico = st.columns([2, 3])
             
@@ -134,14 +140,14 @@ if arquivo_publicado is not None:
                     
                 st.markdown(f"""
                     <div class="mini-card-container">
-                        <div class="mini-card"><div class="mini-card-title">Qtd CTe</div><div class="mini-card-value">{int(cte_cli)}</div></div>
+                        <div class="mini-card"><div class="mini-card-title">Ano Retrasado</div><div class="mini-card-value">R$ {retrasado:,.2f}</div></div>
                         <div class="mini-card"><div class="mini-card-title">Ano Passado</div><div class="mini-card-value">R$ {passado:,.2f}</div></div>
                         <div class="mini-card" style="border-bottom: 3px solid #1E4620;"><div class="mini-card-title" style="color: #1E4620;">Mês Atual</div><div class="mini-card-value" style="color: #1E4620;">R$ {atual:,.2f}</div></div>
                     </div>
                 """, unsafe_allow_html=True)
 
             with col_grafico:
-                # Gráfico com a evolução histórica correta e original
+                # Gráfico com os valores históricos puros de faturamento
                 anos_labels = ['Ano Retrasado', 'Ano Passado', 'Mês Atual']
                 valores_historicos = [retrasado, passado, atual]
                 cores_barras = ['#A2B9A4', '#5C845E', '#1E4620'] 
@@ -162,9 +168,9 @@ if arquivo_publicado is not None:
 
         st.markdown("<br><hr>", unsafe_allow_html=True)
         
-        # Abas Inferiores de Listagem Completa
+        # Abas inferiores originais completas
         st.subheader("📋 Relatórios Consolidados de Carteira")
-        aba1, aba2 = st.tabs(["Faturamento de Cada Cliente (Base)", "Visão Geral de Operações"])
+        aba1, aba2 = st.tabs(["Faturamento Geral da Carteira", "Apenas Clientes Novos Conquistados"])
 
         with aba1:
             df_ret_disp = df_clean[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês atual']].copy()
@@ -172,9 +178,12 @@ if arquivo_publicado is not None:
             st.dataframe(df_ret_disp.style.format({'Ano Retrasado': 'R$ {:,.2f}', 'Ano Passado': 'R$ {:,.2f}', 'Mês Atual': 'R$ {:,.2f}'}), use_container_width=True, hide_index=True)
 
         with aba2:
-            df_novos_disp = df_clean[['Grupo Cliente', 'Qtd CTE', 'Peso Real']].sort_values(by='Qtd CTE', ascending=False).copy()
-            df_novos_disp.columns = ['Grupo Cliente', 'Quantidade de CTe', 'Peso Real (KG)']
-            st.dataframe(df_novos_disp.style.format({'Peso Real (KG)': '{:,.2f}'}), use_container_width=True, hide_index=True)
+            if total_clientes_novos > 0:
+                df_novos_disp = df_novos[['Grupo Cliente', 'Mês atual']].copy()
+                df_novos_disp.columns = ['Nome do Novo Cliente', 'Faturamento Gerado']
+                st.dataframe(df_novos_disp.style.format({'Faturamento Gerado': 'R$ {:,.2f}'}), use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhum cliente novo detectado nesta planilha (todos os clientes ativos possuem histórico no ano passado).")
 
     except Exception as e:
         st.error(f"Erro na leitura do ficheiro. Detalhe: {e}")
