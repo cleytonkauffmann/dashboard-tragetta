@@ -11,6 +11,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Função de segurança para rerun (compatível com versões antigas e novas do Streamlit)
+def executar_rerun():
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
+
 # Inicialização do Banco de Dados de Clientes Perdidos com coluna de numeração consecutiva
 if 'df_perdidos' not in st.session_state:
     st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
@@ -20,7 +27,7 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        /* Aplicação de fonte executiva global */
+        /* Aplicação de fonte executiva global em todos os elementos */
         html, body, [data-testid="stAppViewContainer"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, button, select, input {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
@@ -67,7 +74,7 @@ if config_foto:
     nova_foto = st.sidebar.file_uploader("Sua foto de perfil:", type=["png", "jpg", "jpeg"])
     if nova_foto is not None:
         st.session_state['foto_b64'] = base64.b64encode(nova_foto.read()).decode()
-        st.rerun()
+        executar_rerun()
 
 if st.session_state['foto_b64']:
     avatar_html = f'<img src="data:image/png;base64,{st.session_state["foto_b64"]}" style="width:70px; height:70px; border-radius:50%; object-fit: cover; border: 2px solid white; margin-right:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">'
@@ -120,7 +127,7 @@ if arquivo_publicado is not None:
             if st.button("◀ Voltar Slide", use_container_width=True):
                 if st.session_state['slide_atual'] > 1:
                     st.session_state['slide_atual'] -= 1
-                    st.rerun()
+                    executar_rerun()
                     
         with nav_col2:
             opcoes_slides = {
@@ -138,13 +145,13 @@ if arquivo_publicado is not None:
             )
             if selecao != st.session_state['slide_atual']:
                 st.session_state['slide_atual'] = selecao
-                st.rerun()
+                executar_rerun()
                 
         with nav_col3:
             if st.button("Avançar Slide ▶", use_container_width=True):
                 if st.session_state['slide_atual'] < 4:
                     st.session_state['slide_atual'] += 1
-                    st.rerun()
+                    executar_rerun()
 
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 4</div>", unsafe_allow_html=True)
 
@@ -294,19 +301,17 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (CONSECUTIVO E PIZZA DE COMPARAÇÃO)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (ESTÁVEL E SEQUENCIAL)
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
-            # Limpeza rápida para métricas precisas
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].str.strip() != ""]
             
             total_perdidos_count = df_validos.shape[0]
             faturamento_total_perdido = df_validos['Valor Mensal (R$)'].fillna(0).sum()
             
-            # Layout em Colunas: Métricas na esquerda, Gráfico de Pizza Pro na direita
             col_esq, col_dir = st.columns([3, 4])
             
             with col_esq:
@@ -324,7 +329,7 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
                 
             with col_dir:
-                # Gráfico de Pizza Profissional comparando Receita Ativa vs Receita Perdida
+                # Gráfico de Pizza Corporativo: Receita Ativa vs Receita Perdida
                 fig_churn = go.Figure(data=[go.Pie(
                     labels=['Receita Ativa Base', 'Receita Perdida (Churn)'],
                     values=[faturamento_total, faturamento_total_perdido],
@@ -343,26 +348,26 @@ if arquivo_publicado is not None:
             st.markdown("<br>", unsafe_allow_html=True)
             st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo. O identificador sequencial (**Nº**) preenche automaticamente.")
             
-            # Tabela Editável com índice técnico ocultado e Coluna Sequencial Travada
+            # Ajuste de numeração sequencial dinâmico na cópia de exibição (Evita Loops)
+            df_para_editar = st.session_state['df_perdidos'].copy()
+            if not df_para_editar.empty:
+                df_para_editar['Nº'] = range(1, len(df_para_editar) + 1)
+            
             tabela_editavel = st.data_editor(
-                st.session_state['df_perdidos'],
+                df_para_editar,
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=True, # Oculta o índice 0, 1, 2 que aparecia no print anterior
+                hide_index=True,
                 column_config={
-                    "Nº": st.column_config.NumberColumn("Nº", format="%d", disabled=True), # Auto-gerado e protegido
+                    "Nº": st.column_config.NumberColumn("Nº", format="%d", disabled=True),
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
                     "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
-            # Atualização inteligente e automática da numeração consecutiva 1, 2, 3...
-            if not tabela_editavel.equals(st.session_state['df_perdidos']):
-                if not tabela_editavel.empty:
-                    tabela_editavel['Nº'] = range(1, len(tabela_editavel) + 1)
-                st.session_state['df_perdidos'] = tabela_editavel
-                st.rerun()
+            # Sincroniza de volta no session state de forma limpa e natural
+            st.session_state['df_perdidos'] = tabela_editavel
 
     except Exception as e:
         st.error(f"Erro na leitura do ficheiro. Detalhe: {e}")
