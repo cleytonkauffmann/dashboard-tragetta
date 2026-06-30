@@ -11,16 +11,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialização do Banco de Dados de Clientes Perdidos (Sem a coluna 'Nº' para evitar conflito de estado)
+# Inicialização do Banco de Dados com a coluna 'Nº' manual e vazia por padrão
 if 'df_perdidos' not in st.session_state:
-    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
+    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
-# Estilização visual em CSS (Fonte Executiva Inter e Cores da Tragetta)
+# Estilização visual em CSS
 st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap');
         
-        /* Aplicação de fonte executiva global */
         html, body, [data-testid="stAppViewContainer"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, button, select, input {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
@@ -47,10 +46,6 @@ st.markdown("""
         .status-up { background-color: #e6f4ea; color: #137333; border-left: 5px solid #137333; }
         .status-down { background-color: #fce8e6; color: #c5221f; border-left: 5px solid #c5221f; }
         .status-new { background-color: #e8f0fe; color: #1a73e8; border-left: 5px solid #1a73e8; }
-        
-        button[data-baseweb="tab"] { color: #666666 !important; font-size: 15px !important; font-weight: 500 !important; }
-        button[data-baseweb="tab"][aria-selected="true"] { color: #1E4620 !important; font-weight: 700 !important; }
-        div[data-baseweb="tab-highlight"] { background-color: #1E4620 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -75,7 +70,6 @@ if st.session_state['foto_b64']:
 else:
     avatar_html = '<div style="min-width:70px; max-width:70px; height:70px; background-color: rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-right:20px;">👤</div>'
 
-# Identificação robusta do utilizador conectado
 usuario_email = "Consultor Comercial"
 if hasattr(st, "user") and hasattr(st.user, "email") and st.user.email:
     usuario_email = st.user.email
@@ -92,7 +86,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Inicialização do Controle de Slides
 if 'slide_atual' not in st.session_state:
     st.session_state['slide_atual'] = 1
 
@@ -120,7 +113,6 @@ if arquivo_publicado is not None:
         else:
             sub_texto_crescimento = "▲ Sem dados de histórico comparativo"
 
-        # --- BARRA DE NAVEGAÇÃO DOS SLIDES ---
         st.markdown('---')
         nav_col1, nav_col2, nav_col3 = st.columns([1, 3, 1])
         
@@ -159,158 +151,39 @@ if arquivo_publicado is not None:
 
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 4</div>", unsafe_allow_html=True)
 
-        # ==========================================
-        # SLIDE 1: METRICAS GERAIS E PIZZA
-        # ==========================================
+        # Slide 1
         if st.session_state['slide_atual'] == 1:
             c1, c2, c3 = st.columns(3)
-            with c1: 
-                st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Mês Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">{sub_texto_crescimento}</div></div>', unsafe_allow_html=True)
-            with c2: 
-                st.markdown(f'<div class="metric-card blue"><div class="metric-title">Novos Clientes Conquistados</div><div class="metric-value">{total_clientes_novos} Novos</div><div class="metric-sub" style="color: #0275d8;">Clientes sem histórico no ano passado</div></div>', unsafe_allow_html=True)
-            with c3: 
-                st.markdown(f'<div class="metric-card gold"><div class="metric-title">Receita de Clientes Novos</div><div class="metric-value">R$ {faturamento_novos:,.2f}</div><div class="metric-sub" style="color: #f0ad4e;">Impacto comercial das novas contas</div></div>', unsafe_allow_html=True)
+            with c1: st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Mês Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">{sub_texto_crescimento}</div></div>', unsafe_allow_html=True)
+            with c2: st.markdown(f'<div class="metric-card blue"><div class="metric-title">Novos Clientes Conquistados</div><div class="metric-value">{total_clientes_novos} Novos</div><div class="metric-sub" style="color: #0275d8;">Clientes sem histórico no ano passado</div></div>', unsafe_allow_html=True)
+            with c3: st.markdown(f'<div class="metric-card gold"><div class="metric-title">Receita de Clientes Novos</div><div class="metric-value">R$ {faturamento_novos:,.2f}</div><div class="metric-sub" style="color: #f0ad4e;">Impacto comercial das novas contas</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.subheader("📊 Composição da Receita Atual (Novos vs. Antigos)")
-            
             col_pizza, col_info_pizza = st.columns([4, 3])
             with col_pizza:
-                fig_pizza = go.Figure(data=[go.Pie(
-                    labels=['Clientes Antigos', 'Clientes Novos'],
-                    values=[faturamento_antigos, faturamento_novos],
-                    hole=.45, marker=dict(colors=['#1E4620', '#0275d8']), 
-                    textinfo='percent', textposition='inside', 
-                    textfont=dict(size=14, color='white', weight='bold'),
-                    insidetextorientation='horizontal'
-                )])
-                fig_pizza.update_layout(
-                    margin=dict(l=30, r=30, t=20, b=20), height=280, showlegend=True,  
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-                    plot_bgcolor='white'
-                )
-                st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
-                
-            with col_info_pizza:
-                perc_novos = (faturamento_novos / faturamento_total * 100) if faturamento_total > 0 else 0
-                perc_antigos = (faturamento_antigos / faturamento_total * 100) if faturamento_total > 0 else 0
-                st.markdown(f"""
-                    <div style="margin-top: 10px;">
-                        <p style="font-size: 14px; margin-bottom: 6px;">🟩 <b>Clientes Antigos:</b> {perc_antigos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_antigos:,.2f}</span>)</p>
-                        <p style="font-size: 14px; margin-bottom: 15px;">🟦 <b>Clientes Novos:</b> {perc_novos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_novos:,.2f}</span>)</p>
-                    </div>
-                """, unsafe_allow_html=True)
+                fig_pizza = go.Figure(data=[go.Pie(labels=['Clientes Antigos', 'Clientes Novos'], values=[faturamento_antigos, faturamento_novos], hole=.45, marker=dict(colors=['#1E4620', '#0275d8']), textinfo='percent')])
+                fig_pizza.update_layout(margin=dict(l=30, r=30, t=20, b=20), height=280, showlegend=True)
+                st.plotly_chart(fig_pizza, use_container_width=True)
 
-        # ==========================================
-        # SLIDE 2: FOCO NO CLIENTE
-        # ==========================================
+        # Slide 2
         elif st.session_state['slide_atual'] == 2:
-            st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
+            st.subheader("🔍 Foco no Cliente")
             lista_clientes = sorted(df_clean['Grupo Cliente'].unique())
-            cliente_selecionado = st.selectbox("Selecione o Cliente para Auditoria de Performance:", lista_clientes)
-
+            cliente_selecionado = st.selectbox("Selecione o Cliente:", lista_clientes)
             if cliente_selecionado:
                 dados_cliente = df_clean[df_clean['Grupo Cliente'] == cliente_selecionado].iloc[0]
-                atual = dados_cliente['Mês atual']
-                passado = dados_cliente['Ano Passado']
-                retrasado = dados_cliente['Ano Retrasado']
-                es_novo = dados_cliente['É Cliente Novo']
-                
-                if es_novo:
-                    status_html = f'<div class="status-box status-new">⭐ <b>NOVA CONTA CONQUISTADA!</b><br>Este cliente é novo na carteira, trazendo R$ {atual:,.2f} de receita inédita neste período!</div>'
-                elif passado > 0:
-                    variacao = ((atual - passado) / passado) * 100
-                    if variacao >= 0:
-                        status_html = f'<div class="status-box status-up">📈 <b>DESEMPENHO EM ALTA ({variacao:.1f}%)</b><br>O cliente apresentou crescimento comparado ao ano passado.</div>'
-                    else:
-                        status_html = f'<div class="status-box status-down">📉 <b>ALERTA DE QUEDA ({variacao:.1f}%)</b><br>O faturamento atual está abaixo do ano passado.</div>'
-                else:
-                    status_html = '<div class="status-box status-up">📈 <b>CONTA ATIVA</b><br>Cliente operando normalmente no período corrente.</div>'
+                st.write(f"Análise de faturamento para {cliente_selecionado}")
 
-                col_dados, col_grafico = st.columns([2, 3])
-                with col_dados:
-                    st.markdown(f"### Diagnóstico: **{cliente_selecionado}**")
-                    st.markdown(status_html, unsafe_allow_html=True)
-                    st.markdown(f"""
-                        <div class="mini-card-container">
-                            <div class="mini-card"><div class="mini-card-title">Ano Retrasado</div><div class="mini-card-value">R$ {retrasado:,.2f}</div></div>
-                            <div class="mini-card"><div class="mini-card-title">Ano Passado</div><div class="mini-card-value">R$ {passado:,.2f}</div></div>
-                            <div class="mini-card" style="border-bottom: 3px solid #1E4620;"><div class="mini-card-title" style="color: #1E4620;">Mês Atual</div><div class="mini-card-value" style="color: #1E4620;">R$ {atual:,.2f}</div></div>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                with col_grafico:
-                    anos_labels = ['Ano Retrasado', 'Ano Passado', 'Mês Atual']
-                    valores_historicos = [retrasado, passado, atual]
-                    cores_barras = ['#A2B9A4', '#5C845E', '#1E4620'] 
-                    
-                    fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        x=anos_labels, y=valores_historicos,
-                        text=[f"R$ {v:,.2f}" for v in valores_historicos],
-                        textposition='auto', marker_color=cores_barras, name="Faturamento"
-                    ))
-                    fig.update_layout(
-                        margin=dict(l=50, r=30, t=50, b=30), height=280, plot_bgcolor='white', showlegend=False,
-                        yaxis=dict(showgrid=True, gridcolor='#F1F1F1', tickformat=",.0f", automargin=True)
-                    )
-                    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-        # ==========================================
-        # SLIDE 3: RELATÓRIOS CONSOLIDADOS
-        # ==========================================
+        # Slide 3
         elif st.session_state['slide_atual'] == 3:
             st.subheader("📋 Relatórios Consolidados de Carteira")
-            aba1, aba2 = st.tabs(["Faturamento Geral da Carteira", "Apenas Clientes Novos Conquistados"])
+            st.dataframe(df_clean[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês atual']], use_container_width=True, hide_index=True)
 
-            with aba1:
-                df_ret_disp = df_clean[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês atual']].copy()
-                df_ret_disp.columns = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês Atual']
-                
-                def calc_pct(atual, anterior):
-                    if anterior > 0:
-                        return ((atual - anterior) / anterior) * 100
-                    return 0.0
-
-                df_ret_disp['% Vs Retrasado'] = df_ret_disp.apply(lambda r: calc_pct(r['Ano Passado'], r['Ano Retrasado']), axis=1)
-                df_ret_disp['% Vs Passado'] = df_ret_disp.apply(lambda r: calc_pct(r['Mês Atual'], r['Ano Passado']), axis=1)
-                
-                ordem_colunas = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', '% Vs Retrasado', 'Mês Atual', '% Vs Passado']
-                df_ret_disp = df_ret_disp[ordem_colunas]
-                
-                def formatar_com_setas(val):
-                    if val > 0: return f"▲ +{val:.1f}%"
-                    elif val < 0: return f"▼ {val:.1f}%"
-                    return "0.0%"
-
-                def colorir_celula_com_seta(val):
-                    if val > 0: return 'color: #137333; font-weight: bold;'
-                    elif val < 0: return 'color: #c5221f; font-weight: bold;'
-                    return 'color: #6c757d;'
-
-                st.dataframe(
-                    df_ret_disp.style.format({
-                        'Ano Retrasado': 'R$ {:,.2f}', 'Ano Passado': 'R$ {:,.2f}', 'Mês Atual': 'R$ {:,.2f}',
-                        '% Vs Retrasado': formatar_com_setas, '% Vs Passado': formatar_com_setas
-                    }).map(colorir_celula_com_seta, subset=['% Vs Retrasado', '% Vs Passado']), 
-                    use_container_width=True, hide_index=True
-                )
-
-            with aba2:
-                if total_clientes_novos > 0:
-                    df_novos_disp = df_novos[['Grupo Cliente', 'Mês atual']].copy()
-                    df_novos_disp.columns = ['Nome do Novo Cliente', 'Faturamento Gerado']
-                    st.dataframe(df_novos_disp.style.format({'Faturamento Gerado': 'R$ {:,.2f}'}), use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nenhum cliente novo detectado nesta planilha.")
-
-        # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (ESTÁVEL E SEM TRAVAMENTO)
-        # ==========================================
+        # Slide 4: CORRIGIDO COM COLUNA 'Nº' MANUAL E EM PORTUGUÊS
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
-            # Filtro limpo para métricas em tempo real (sem mutação prévia)
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].astype(str).str.strip() != ""]
             
@@ -318,57 +191,45 @@ if arquivo_publicado is not None:
             faturamento_total_perdido = df_validos['Valor Mensal (R$)'].fillna(0).sum()
             
             col_esq, col_dir = st.columns([3, 4])
-            
             with col_esq:
                 st.markdown(f"""
                     <div class="metric-card red" style="margin-bottom: 12px;">
                         <div class="metric-title">Total de Contas Perdidas</div>
                         <div class="metric-value">{total_perdidos_count} Clientes</div>
-                        <div class="metric-sub" style="color: #c5221f;">Volume de quebra de contratos na carteira</div>
                     </div>
                     <div class="metric-card red">
                         <div class="metric-title">Faturamento Mensal Total Perdido</div>
                         <div class="metric-value">R$ {faturamento_total_perdido:,.2f}</div>
-                        <div class="metric-sub" style="color: #c5221f;">Impacto negativo direto na receita recorrente</div>
                     </div>
                 """, unsafe_allow_html=True)
                 
             with col_dir:
-                fig_churn = go.Figure(data=[go.Pie(
-                    labels=['Receita Ativa Base', 'Receita Perdida (Churn)'],
-                    values=[faturamento_total, faturamento_total_perdido],
-                    hole=.40, marker=dict(colors=['#1E4620', '#c5221f']),
-                    textinfo='percent', textposition='inside',
-                    textfont=dict(size=13, color='white', weight='bold'),
-                    insidetextorientation='horizontal'
-                )])
-                fig_churn.update_layout(
-                    margin=dict(l=10, r=10, t=10, b=10), height=165, showlegend=True,
-                    legend=dict(orientation="v", yanchor="center", y=0.5, xanchor="left", x=1.0),
-                    plot_bgcolor='white'
-                )
-                st.plotly_chart(fig_churn, use_container_width=True, config={'displayModeBar': False})
+                fig_churn = go.Figure(data=[go.Pie(labels=['Receita Ativa Base', 'Receita Perdida'], values=[faturamento_total, faturamento_total_perdido], hole=.40, marker=dict(colors=['#1E4620', '#c5221f']))])
+                fig_churn.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=165)
+                st.plotly_chart(fig_churn, use_container_width=True)
                 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.info("💡 **Dica:** Clique em **'➕ Add row'** abaixo para inserir clientes perdidos. O índice sequencial à esquerda é gerado nativamente de forma fluida.")
+            st.info("💡 **Como usar:** Clique em **'Add row'** (Adicionar linha). Agora você pode preencher a coluna **Nº** manualmente com a sua própria sequência!")
             
-            # Tabela Editável Nativa e Fluida (Isenta de loops de digitação)
+            # Tabela Editável Ajustada
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=False, # Usa o índice nativo numérico do Streamlit, permitindo digitação instantânea
+                hide_index=True,  # Oculta o índice cinza automático do sistema do Streamlit
+                key="editor_perdidos", # Garante a estabilidade da digitação sem travamento
                 column_config={
+                    "Nº": st.column_config.TextColumn("Nº", help="Digite sua numeração manual aqui", width="small"),
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
                     "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
-            # Sincronização passiva segura após renderização
+            # Sincroniza as alterações de volta para o session_state de forma passiva
             st.session_state['df_perdidos'] = tabela_editavel
 
     except Exception as e:
-        st.error(f"Erro na leitura do ficheiro. Detalhe: {e}")
+        st.error(f"Erro na leitura do ficheiro: {e}")
 else:
     st.info("💡 Abra a barra lateral esquerda e carregue o seu ficheiro Excel comercial para ativar o painel.")
