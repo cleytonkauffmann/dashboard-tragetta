@@ -11,38 +11,45 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialização do Banco de Dados de Clientes Perdidos (Session State)
+# Inicialização do Banco de Dados de Clientes Perdidos com coluna de numeração consecutiva
 if 'df_perdidos' not in st.session_state:
-    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
+    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
-# Estilização visual em CSS (Verde Corporativo, Alertas e Controles dos Slides)
+# Estilização visual em CSS (Fonte Profissional Inter, Cores Corporativas e Cards)
 st.markdown("""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* Aplicação de fonte executiva global */
+        html, body, [data-testid="stAppViewContainer"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, button, select, input {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+        
         .main-header { background-color: #1E4620; color: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; }
         .header-text { display: flex; flex-direction: column; }
-        .main-header h1 { margin: 0; font-size: 24px; color: white; line-height: 1.2; }
+        .main-header h1 { margin: 0; font-size: 24px; color: white; line-height: 1.2; font-weight: 700; }
         .main-header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }
         
         .metric-card { background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #1E4620; }
         .metric-card.blue { border-left-color: #0275d8; }
         .metric-card.gold { border-left-color: #f0ad4e; }
         .metric-card.red { border-left-color: #c5221f; }
-        .metric-title { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; }
-        .metric-value { font-size: 22px; font-weight: bold; color: #111; margin-top: 5px; word-wrap: break-word; }
-        .metric-sub { font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 500; }
+        .metric-title { font-size: 11px; color: #666; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .metric-value { font-size: 22px; font-weight: 700; color: #111; margin-top: 5px; word-wrap: break-word; }
+        .metric-sub { font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 600; }
         
         .mini-card-container { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .mini-card { flex: 1; min-width: 100px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; text-align: center; }
-        .mini-card-title { font-size: 11px; color: #6c757d; text-transform: uppercase; font-weight: bold; }
-        .mini-card-value { font-size: 14px; font-weight: bold; color: #212529; margin-top: 2px; word-wrap: break-word; }
+        .mini-card-title { font-size: 11px; color: #6c757d; text-transform: uppercase; font-weight: 700; }
+        .mini-card-value { font-size: 14px; font-weight: 700; color: #212529; margin-top: 2px; word-wrap: break-word; }
         
         .status-box { padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; font-weight: 500; line-height: 1.5; word-wrap: break-word; }
         .status-up { background-color: #e6f4ea; color: #137333; border-left: 5px solid #137333; }
         .status-down { background-color: #fce8e6; color: #c5221f; border-left: 5px solid #c5221f; }
         .status-new { background-color: #e8f0fe; color: #1a73e8; border-left: 5px solid #1a73e8; }
         
-        button[data-baseweb="tab"] { color: #666666 !important; font-size: 16px !important; }
-        button[data-baseweb="tab"][aria-selected="true"] { color: #1E4620 !important; font-weight: bold !important; }
+        button[data-baseweb="tab"] { color: #666666 !important; font-size: 15px !important; font-weight: 500 !important; }
+        button[data-baseweb="tab"][aria-selected="true"] { color: #1E4620 !important; font-weight: 700 !important; }
         div[data-baseweb="tab-highlight"] { background-color: #1E4620 !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -223,7 +230,7 @@ if arquivo_publicado is not None:
 
                 with col_grafico:
                     anos_labels = ['Ano Retrasado', 'Ano Passado', 'Mês Atual']
-                    valores_historicos = [retrasado, passado, altual := atual]
+                    valores_historicos = [retrasado, passado, atual]
                     cores_barras = ['#A2B9A4', '#5C845E', '#1E4620'] 
                     
                     fig = go.Figure()
@@ -287,28 +294,28 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (CORRIGIDO SEM PLACEHOLDER)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (CONSECUTIVO E PIZZA DE COMPARAÇÃO)
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
+            # Limpeza rápida para métricas precisas
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].str.strip() != ""]
             
             total_perdidos_count = df_validos.shape[0]
             faturamento_total_perdido = df_validos['Valor Mensal (R$)'].fillna(0).sum()
             
-            col_m1, col_m2 = st.columns(2)
-            with col_m1:
+            # Layout em Colunas: Métricas na esquerda, Gráfico de Pizza Pro na direita
+            col_esq, col_dir = st.columns([3, 4])
+            
+            with col_esq:
                 st.markdown(f"""
-                    <div class="metric-card red">
+                    <div class="metric-card red" style="margin-bottom: 12px;">
                         <div class="metric-title">Total de Contas Perdidas</div>
                         <div class="metric-value">{total_perdidos_count} Clientes</div>
                         <div class="metric-sub" style="color: #c5221f;">Volume de quebra de contratos na carteira</div>
                     </div>
-                """, unsafe_allow_html=True)
-            with col_m2:
-                st.markdown(f"""
                     <div class="metric-card red">
                         <div class="metric-title">Faturamento Mensal Total Perdido</div>
                         <div class="metric-value">R$ {faturamento_total_perdido:,.2f}</div>
@@ -316,22 +323,44 @@ if arquivo_publicado is not None:
                     </div>
                 """, unsafe_allow_html=True)
                 
+            with col_dir:
+                # Gráfico de Pizza Profissional comparando Receita Ativa vs Receita Perdida
+                fig_churn = go.Figure(data=[go.Pie(
+                    labels=['Receita Ativa Base', 'Receita Perdida (Churn)'],
+                    values=[faturamento_total, faturamento_total_perdido],
+                    hole=.40, marker=dict(colors=['#1E4620', '#c5221f']),
+                    textinfo='percent', textposition='inside',
+                    textfont=dict(size=13, color='white', weight='bold'),
+                    insidetextorientation='horizontal'
+                )])
+                fig_churn.update_layout(
+                    margin=dict(l=10, r=10, t=10, b=10), height=165, showlegend=True,
+                    legend=dict(orientation="v", yanchor="center", y=0.5, xanchor="left", x=1.0),
+                    plot_bgcolor='white'
+                )
+                st.plotly_chart(fig_churn, use_container_width=True, config={'displayModeBar': False})
+                
             st.markdown("<br>", unsafe_allow_html=True)
-            st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo para abrir uma linha e preencher os dados do cliente perdido.")
+            st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo. O identificador sequencial (**Nº**) preenche automaticamente.")
             
-            # Ajustado para compatibilidade total removendo o argumento 'placeholder'
+            # Tabela Editável com índice técnico ocultado e Coluna Sequencial Travada
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
+                hide_index=True, # Oculta o índice 0, 1, 2 que aparecia no print anterior
                 column_config={
+                    "Nº": st.column_config.NumberColumn("Nº", format="%d", disabled=True), # Auto-gerado e protegido
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
                     "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
+            # Atualização inteligente e automática da numeração consecutiva 1, 2, 3...
             if not tabela_editavel.equals(st.session_state['df_perdidos']):
+                if not tabela_editavel.empty:
+                    tabela_editavel['Nº'] = range(1, len(tabela_editavel) + 1)
                 st.session_state['df_perdidos'] = tabela_editavel
                 st.rerun()
 
