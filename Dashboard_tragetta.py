@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialização do Banco de Dados de Clientes Perdidos (Session State para não perder os dados ao mudar de slide)
+# Inicialização do Banco de Dados de Clientes Perdidos (Session State)
 if 'df_perdidos' not in st.session_state:
     st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
@@ -77,7 +77,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Inicialização do Controle de Slides (Subiu para 4 Slides agora)
+# Inicialização do Controle de Slides
 if 'slide_atual' not in st.session_state:
     st.session_state['slide_atual'] = 1
 
@@ -105,7 +105,7 @@ if arquivo_publicado is not None:
         else:
             sub_texto_crescimento = "▲ Sem dados de histórico comparativo"
 
-        # --- BARRA DE NAVEGAÇÃO DOS SLIDES (1 ATÉ 4) ---
+        # --- BARRA DE NAVEGAÇÃO DOS SLIDES ---
         st.markdown('---')
         nav_col1, nav_col2, nav_col3 = st.columns([1, 3, 1])
         
@@ -182,13 +182,6 @@ if arquivo_publicado is not None:
                         <p style="font-size: 14px; margin-bottom: 15px;">🟦 <b>Clientes Novos:</b> {perc_novos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_novos:,.2f}</span>)</p>
                     </div>
                 """, unsafe_allow_html=True)
-                
-                if total_clientes_novos > 0:
-                    st.markdown(f"""
-                        <div class="status-box status-new">
-                            🚀 <b>Resultado Comercial:</b> As novas contas representam <b>{perc_novos:.1f}%</b> do faturamento global do período.
-                        </div>
-                    """, unsafe_allow_html=True)
 
         # ==========================================
         # SLIDE 2: FOCO NO CLIENTE
@@ -230,7 +223,7 @@ if arquivo_publicado is not None:
 
                 with col_grafico:
                     anos_labels = ['Ano Retrasado', 'Ano Passado', 'Mês Atual']
-                    valores_historicos = [retrasado, passado, atual]
+                    valores_historicos = [retrasado, passado, altual := atual]
                     cores_barras = ['#A2B9A4', '#5C845E', '#1E4620'] 
                     
                     fig = go.Figure()
@@ -294,19 +287,17 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: NOVO! AUDITORIA DE CLIENTES PERDIDOS (CHURN)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (CORRIGIDO SEM PLACEHOLDER)
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
-            # Limpeza rápida de linhas fantasmas para os cálculos matemáticos de soma
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].str.strip() != ""]
             
             total_perdidos_count = df_validos.shape[0]
             faturamento_total_perdido = df_validos['Valor Mensal (R$)'].fillna(0).sum()
             
-            # Blocos executivos de somas matemáticas no topo do slide
             col_m1, col_m2 = st.columns(2)
             with col_m1:
                 st.markdown(f"""
@@ -328,19 +319,18 @@ if arquivo_publicado is not None:
             st.markdown("<br>", unsafe_allow_html=True)
             st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo para abrir uma linha e preencher os dados do cliente perdido.")
             
-            # Planilha Inteligente e Interativa direto na Tela do Slide
+            # Ajustado para compatibilidade total removendo o argumento 'placeholder'
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
-                num_rows="dynamic", # Permite criar e excluir linhas à vontade
+                num_rows="dynamic",
                 use_container_width=True,
                 column_config={
-                    "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", placeholder="Ex: Transportadora ABC", required=True),
+                    "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
-                    "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda", placeholder="Ex: Preço mais baixo do concorrente")
+                    "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
-            # Salva o estado da digitação imediatamente para não resetar quando navegar nos outros slides
             if not tabela_editavel.equals(st.session_state['df_perdidos']):
                 st.session_state['df_perdidos'] = tabela_editavel
                 st.rerun()
