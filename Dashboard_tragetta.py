@@ -11,10 +11,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilização visual em CSS original (Verde Corporativo)
+# Estilização visual em CSS original (Verde Corporativo com ajustes de alinhamento)
 st.markdown("""
     <style>
-        .main-header { background-color: #1E4620; color: white; padding: 20px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; }
+        .main-header { background-color: #1E4620; color: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; }
         .header-text { display: flex; flex-direction: column; }
         .main-header h1 { margin: 0; font-size: 24px; color: white; line-height: 1.2; }
         .main-header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }
@@ -22,13 +22,13 @@ st.markdown("""
         .metric-card.blue { border-left-color: #0275d8; }
         .metric-card.gold { border-left-color: #f0ad4e; }
         .metric-title { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; }
-        .metric-value { font-size: 22px; font-weight: bold; color: #111; margin-top: 5px; }
+        .metric-value { font-size: 22px; font-weight: bold; color: #111; margin-top: 5px; word-wrap: break-word; }
         .metric-sub { font-size: 11px; color: #28a745; margin-top: 4px; font-weight: 500; }
-        .mini-card-container { display: flex; gap: 10px; margin-top: 15px; }
-        .mini-card { flex: 1; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; text-align: center; }
+        .mini-card-container { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .mini-card { flex: 1; min-width: 100px; background-color: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; text-align: center; }
         .mini-card-title { font-size: 11px; color: #6c757d; text-transform: uppercase; font-weight: bold; }
-        .mini-card-value { font-size: 15px; font-weight: bold; color: #212529; margin-top: 2px; }
-        .status-box { padding: 18px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; font-weight: 500; line-height: 1.5; }
+        .mini-card-value { font-size: 14px; font-weight: bold; color: #212529; margin-top: 2px; word-wrap: break-word; }
+        .status-box { padding: 15px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; font-weight: 500; line-height: 1.5; word-wrap: break-word; }
         .status-up { background-color: #e6f4ea; color: #137333; border-left: 5px solid #137333; }
         .status-down { background-color: #fce8e6; color: #c5221f; border-left: 5px solid #c5221f; }
         .status-new { background-color: #e8f0fe; color: #1a73e8; border-left: 5px solid #1a73e8; }
@@ -108,26 +108,28 @@ if arquivo_publicado is not None:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # NOVA SEÇÃO: GRÁFICO DE PIZZA (COMPOSIÇÃO ESTRATÉGICA)
+        # SEÇÃO: GRÁFICO DE PIZZA AJUSTADO PARA EVITAR QUEBRAS DE TEXTO
         st.subheader("📊 Composição da Receita Atual (Novos vs. Antigos)")
-        col_pizza, col_info_pizza = st.columns([3, 2])
+        col_pizza, col_info_pizza = st.columns([4, 3])
         
         with col_pizza:
-            # Gráfico de Rosca profissional (Donut Chart)
+            # Gráfico de Rosca profissional com segurança de alinhamento interna
             fig_pizza = go.Figure(data=[go.Pie(
                 labels=['Clientes Antigos', 'Clientes Novos'],
                 values=[faturamento_antigos, faturamento_novos],
-                hole=.4, # Efeito rosca elegante
-                marker=dict(colors=['#1E4620', '#0275d8']), # Verde Institucional e Azul Conquista
-                textinfo='percent+label',
-                texttemplate='<b>%{label}</b><br>%{percent}',
+                hole=.45,
+                marker=dict(colors=['#1E4620', '#0275d8']), 
+                textinfo='percent',  # Mantém apenas a % dentro para nunca cortar as letras
+                textposition='inside', # Garante que fica protegido dentro da fatia
+                textfont=dict(size=14, color='white', weight='bold'),
                 insidetextorientation='horizontal'
             )])
             
             fig_pizza.update_layout(
-                margin=dict(l=10, r=10, t=10, b=10),
-                height=300,
-                showlegend=False,
+                margin=dict(l=30, r=30, t=20, b=20),
+                height=260,
+                showlegend=True,  # Legenda nativa limpa e automática do plotly abaixo
+                legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
                 plot_bgcolor='white'
             )
             st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
@@ -137,22 +139,22 @@ if arquivo_publicado is not None:
             perc_antigos = (faturamento_antigos / faturamento_total * 100) if faturamento_total > 0 else 0
             
             st.markdown(f"""
-                <div style="margin-top: 25px;">
-                    <p style="font-size: 15px; margin-bottom: 8px;">🟩 <b>Clientes Antigos (Base Ativa):</b> {perc_antigos:.1f}% (R$ {faturamento_antigos:,.2f})</p>
-                    <p style="font-size: 15px; margin-bottom: 20px;">🟦 <b>Clientes Novos (Conquistas):</b> {perc_novos:.1f}% (R$ {faturamento_novos:,.2f})</p>
+                <div style="margin-top: 10px;">
+                    <p style="font-size: 14px; margin-bottom: 6px;">🟩 <b>Clientes Antigos:</b> {perc_antigos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_antigos:,.2f}</span>)</p>
+                    <p style="font-size: 14px; margin-bottom: 15px;">🟦 <b>Clientes Novos:</b> {perc_novos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_novos:,.2f}</span>)</p>
                 </div>
             """, unsafe_allow_html=True)
             
             if total_clientes_novos > 0:
                 st.markdown(f"""
-                    <div class="status-box status-new">
-                        🚀 <b>Excelente Impacto Comercial!</b><br>Os novos clientes já são responsáveis por <b>{perc_novos:.1f}%</b> de todo o faturamento gerado no período corrente.
+                    <div class="status-box status-new" style="margin-top: 5px;">
+                        🚀 <b>Resultado Comercial:</b> As novas contas representam <b>{perc_novos:.1f}%</b> do faturamento global do período.
                     </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                    <div class="status-box" style="background-color: #f8f9fa; color: #666; border-left: 5px solid #6c757d;">
-                        💡 <b>Foco em Retenção:</b> 100% do faturamento atual provém da sua base histórica de clientes cadastrados no ano passado.
+                    <div class="status-box" style="background-color: #f8f9fa; color: #666; border-left: 5px solid #6c757d; margin-top: 5px;">
+                        💡 <b>Base Consolidada:</b> 100% da receita provém de clientes recorrentes do ano passado.
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -171,7 +173,6 @@ if arquivo_publicado is not None:
             retrasado = dados_cliente['Ano Retrasado']
             es_novo = dados_cliente['É Cliente Novo']
             
-            # Caixa de Status Inteligente baseada no crescimento ou se é Novo
             if es_novo:
                 status_html = f'<div class="status-box status-new">⭐ <b>NOVA CONTA CONQUISTADA!</b><br>Este cliente é novo na carteira, trazendo R$ {atual:,.2f} de receita inédita neste período!</div>'
             elif passado > 0:
@@ -198,7 +199,7 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
 
             with col_grafico:
-                # Gráfico com os valores históricos puros de faturamento
+                # Gráfico de barras com margem extra no topo para o texto R$ nunca cortar
                 anos_labels = ['Ano Retrasado', 'Ano Passado', 'Mês Atual']
                 valores_historicos = [retrasado, passado, atual]
                 cores_barras = ['#A2B9A4', '#5C845E', '#1E4620'] 
@@ -211,9 +212,9 @@ if arquivo_publicado is not None:
                 ))
                 
                 fig.update_layout(
-                    margin=dict(l=40, r=20, t=40, b=20), height=280, plot_bgcolor='white', showlegend=False,
-                    yaxis=dict(showgrid=True, gridcolor='#F1F1F1', tickformat=",.0f"),
-                    xaxis=dict(tickfont=dict(color="#333"))
+                    margin=dict(l=50, r=30, t=50, b=30), height=280, plot_bgcolor='white', showlegend=False,
+                    yaxis=dict(showgrid=True, gridcolor='#F1F1F1', tickformat=",.0f", automargin=True),
+                    xaxis=dict(tickfont=dict(color="#333"), automargin=True)
                 )
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
