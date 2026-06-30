@@ -11,9 +11,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialização do Banco de Dados de Clientes Perdidos
+# Inicialização do Banco de Dados de Clientes Perdidos (Sem a coluna 'Nº' para evitar conflito de estado)
 if 'df_perdidos' not in st.session_state:
-    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
+    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
 # Estilização visual em CSS (Fonte Executiva Inter e Cores da Tragetta)
 st.markdown("""
@@ -75,12 +75,19 @@ if st.session_state['foto_b64']:
 else:
     avatar_html = '<div style="min-width:70px; max-width:70px; height:70px; background-color: rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-right:20px;">👤</div>'
 
+# Identificação robusta do utilizador conectado
+usuario_email = "Consultor Comercial"
+if hasattr(st, "user") and hasattr(st.user, "email") and st.user.email:
+    usuario_email = st.user.email
+elif hasattr(st, "experimental_user") and hasattr(st.experimental_user, "email") and st.experimental_user.email:
+    usuario_email = st.experimental_user.email
+
 st.markdown(f"""
     <div class="main-header">
         {avatar_html}
         <div class="header-text">
             <h1>📊 Painel de Performance Comercial LTL — Tragetta</h1>
-            <p><b>Painel de Análise Universal</b> | KAO: {st.experimental_user.email if hasattr(st, "experimental_user") else "Consultor Comercial"}</p>
+            <p><b>Painel de Análise Universal</b> | KAO: {usuario_email}</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -195,7 +202,7 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 2: FOCO NO CLIENTE (CORRIGIDO)
+        # SLIDE 2: FOCO NO CLIENTE
         # ==========================================
         elif st.session_state['slide_atual'] == 2:
             st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
@@ -298,16 +305,12 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS ( ULTRA ESTÁVEL )
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (ESTÁVEL E SEM TRAVAMENTO)
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
-            # Recalcula e sincroniza a numeração sequencial 1, 2, 3 de forma limpa e imediata
-            st.session_state['df_perdidos'] = st.session_state['df_perdidos'].reset_index(drop=True)
-            st.session_state['df_perdidos']['Nº'] = range(1, len(st.session_state['df_perdidos']) + 1)
-            
-            # Filtro para cálculo preciso das métricas base
+            # Filtro limpo para métricas em tempo real (sem mutação prévia)
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].astype(str).str.strip() != ""]
             
@@ -331,7 +334,6 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
                 
             with col_dir:
-                # Gráfico de Pizza Corporativo: Receita Ativa vs Receita Perdida
                 fig_churn = go.Figure(data=[go.Pie(
                     labels=['Receita Ativa Base', 'Receita Perdida (Churn)'],
                     values=[faturamento_total, faturamento_total_perdido],
@@ -348,23 +350,22 @@ if arquivo_publicado is not None:
                 st.plotly_chart(fig_churn, use_container_width=True, config={'displayModeBar': False})
                 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo. O identificador sequencial (**Nº**) preenche automaticamente.")
+            st.info("💡 **Dica:** Clique em **'➕ Add row'** abaixo para inserir clientes perdidos. O índice sequencial à esquerda é gerado nativamente de forma fluida.")
             
-            # Tabela Editável Livre de Loops (Sem st.rerun interno)
+            # Tabela Editável Nativa e Fluida (Isenta de loops de digitação)
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=True, 
+                hide_index=False, # Usa o índice nativo numérico do Streamlit, permitindo digitação instantânea
                 column_config={
-                    "Nº": st.column_config.NumberColumn("Nº", format="%d", disabled=True),
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
                     "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
-            # Sincronização passiva de dados estruturados
+            # Sincronização passiva segura após renderização
             st.session_state['df_perdidos'] = tabela_editavel
 
     except Exception as e:
