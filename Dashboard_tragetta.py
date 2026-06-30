@@ -11,23 +11,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Função de segurança para rerun (compatível com versões antigas e novas do Streamlit)
-def executar_rerun():
-    if hasattr(st, "rerun"):
-        st.rerun()
-    else:
-        st.experimental_rerun()
-
-# Inicialização do Banco de Dados de Clientes Perdidos com coluna de numeração consecutiva
+# Inicialização do Banco de Dados de Clientes Perdidos
 if 'df_perdidos' not in st.session_state:
     st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
-# Estilização visual em CSS (Fonte Profissional Inter, Cores Corporativas e Cards)
+# Estilização visual em CSS (Fonte Executiva Inter e Cores da Tragetta)
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        /* Aplicação de fonte executiva global em todos os elementos */
+        /* Aplicação de fonte executiva global */
         html, body, [data-testid="stAppViewContainer"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, button, select, input {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
@@ -74,7 +67,8 @@ if config_foto:
     nova_foto = st.sidebar.file_uploader("Sua foto de perfil:", type=["png", "jpg", "jpeg"])
     if nova_foto is not None:
         st.session_state['foto_b64'] = base64.b64encode(nova_foto.read()).decode()
-        executar_rerun()
+        if hasattr(st, "rerun"): st.rerun()
+        else: st.experimental_rerun()
 
 if st.session_state['foto_b64']:
     avatar_html = f'<img src="data:image/png;base64,{st.session_state["foto_b64"]}" style="width:70px; height:70px; border-radius:50%; object-fit: cover; border: 2px solid white; margin-right:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">'
@@ -127,7 +121,8 @@ if arquivo_publicado is not None:
             if st.button("◀ Voltar Slide", use_container_width=True):
                 if st.session_state['slide_atual'] > 1:
                     st.session_state['slide_atual'] -= 1
-                    executar_rerun()
+                    if hasattr(st, "rerun"): st.rerun()
+                    else: st.experimental_rerun()
                     
         with nav_col2:
             opcoes_slides = {
@@ -145,13 +140,15 @@ if arquivo_publicado is not None:
             )
             if selecao != st.session_state['slide_atual']:
                 st.session_state['slide_atual'] = selecao
-                executar_rerun()
+                if hasattr(st, "rerun"): st.rerun()
+                else: st.experimental_rerun()
                 
         with nav_col3:
             if st.button("Avançar Slide ▶", use_container_width=True):
                 if st.session_state['slide_atual'] < 4:
                     st.session_state['slide_atual'] += 1
-                    executar_rerun()
+                    if hasattr(st, "rerun"): st.rerun()
+                    else: st.experimental_rerun()
 
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 4</div>", unsafe_allow_html=True)
 
@@ -198,7 +195,7 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 2: FOCO NO CLIENTE
+        # SLIDE 2: FOCO NO CLIENTE (CORRIGIDO)
         # ==========================================
         elif st.session_state['slide_atual'] == 2:
             st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
@@ -301,13 +298,18 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (ESTÁVEL E SEQUENCIAL)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS ( ULTRA ESTÁVEL )
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
+            # Recalcula e sincroniza a numeração sequencial 1, 2, 3 de forma limpa e imediata
+            st.session_state['df_perdidos'] = st.session_state['df_perdidos'].reset_index(drop=True)
+            st.session_state['df_perdidos']['Nº'] = range(1, len(st.session_state['df_perdidos']) + 1)
+            
+            # Filtro para cálculo preciso das métricas base
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
-            df_validos = df_validos[df_validos['Nome do Cliente'].str.strip() != ""]
+            df_validos = df_validos[df_validos['Nome do Cliente'].astype(str).str.strip() != ""]
             
             total_perdidos_count = df_validos.shape[0]
             faturamento_total_perdido = df_validos['Valor Mensal (R$)'].fillna(0).sum()
@@ -348,16 +350,12 @@ if arquivo_publicado is not None:
             st.markdown("<br>", unsafe_allow_html=True)
             st.info("💡 **Instruções:** Clique em **'➕ Add row'** na base da tabela abaixo. O identificador sequencial (**Nº**) preenche automaticamente.")
             
-            # Ajuste de numeração sequencial dinâmico na cópia de exibição (Evita Loops)
-            df_para_editar = st.session_state['df_perdidos'].copy()
-            if not df_para_editar.empty:
-                df_para_editar['Nº'] = range(1, len(df_para_editar) + 1)
-            
+            # Tabela Editável Livre de Loops (Sem st.rerun interno)
             tabela_editavel = st.data_editor(
-                df_para_editar,
+                st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=True,
+                hide_index=True, 
                 column_config={
                     "Nº": st.column_config.NumberColumn("Nº", format="%d", disabled=True),
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
@@ -366,7 +364,7 @@ if arquivo_publicado is not None:
                 }
             )
             
-            # Sincroniza de volta no session state de forma limpa e natural
+            # Sincronização passiva de dados estruturados
             st.session_state['df_perdidos'] = tabela_editavel
 
     except Exception as e:
