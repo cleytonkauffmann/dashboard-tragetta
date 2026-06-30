@@ -15,6 +15,9 @@ st.set_page_config(
 if 'df_perdidos' not in st.session_state:
     st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
+if 'foto_b64' not in st.session_state:
+    st.session_state['foto_b64'] = None
+
 # Estilização visual completa em CSS (Fonte Executiva Inter e Cores da Tragetta)
 st.markdown("""
     <style>
@@ -58,18 +61,18 @@ st.markdown("""
 st.sidebar.header("📥 Carga de Dados")
 arquivo_publicado = st.sidebar.file_uploader("Arraste o seu arquivo Excel (.xlsx):", type=["xlsx"])
 
-if 'foto_b64' not in st.session_state:
-    st.session_state['foto_b64'] = None
-
 st.sidebar.markdown("---")
 config_foto = st.sidebar.checkbox("⚙️ Configurar Minha Foto")
 if config_foto:
     nova_foto = st.sidebar.file_uploader("Sua foto de perfil:", type=["png", "jpg", "jpeg"])
     if nova_foto is not None:
-        st.session_state['foto_b64'] = base64.b64encode(nova_foto.read()).decode()
-        if hasattr(st, "rerun"): st.rerun()
-        else: st.experimental_rerun()
+        # Processamento otimizado na memória sem causar loops ou piscadas na tela
+        bytes_foto = nova_foto.getvalue()
+        novo_b64 = base64.b64encode(bytes_foto).decode()
+        if st.session_state['foto_b64'] != novo_b64:
+            st.session_state['foto_b64'] = novo_b64
 
+# Configuração do Avatar no Cabeçalho
 if st.session_state['foto_b64']:
     avatar_html = f'<img src="data:image/png;base64,{st.session_state["foto_b64"]}" style="width:70px; height:70px; border-radius:50%; object-fit: cover; border: 2px solid white; margin-right:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">'
 else:
@@ -113,7 +116,7 @@ if arquivo_publicado is not None:
         faturamento_passado_total = df_clean['Ano Passado'].sum()
         faturamento_antigos = max(0.0, faturamento_total - faturamento_novos)
         
-        # NOVOS CÁLCULOS: Total de Clientes Ativos Juntos (Novos + Antigos)
+        # Total de Clientes Ativos Juntos (Novos + Antigos)
         total_clientes_ativos = df_clean[df_clean['Mês atual'] > 0].shape[0]
         total_clientes_antigos_ativos = total_clientes_ativos - total_clientes_novos
         
@@ -163,7 +166,7 @@ if arquivo_publicado is not None:
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 4</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 1: MÉTRICAS GERAIS E PIZZA (ATUALIZADO COM TOTAL)
+        # SLIDE 1: MÉTRICAS GERAIS E PIZZA 
         # ==========================================
         if st.session_state['slide_atual'] == 1:
             c1, c2, c3, c4 = st.columns(4)
