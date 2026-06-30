@@ -263,28 +263,24 @@ if arquivo_publicado is not None:
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (COM % DENTRO DA TABELA)
+        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (COM SETAS E CORES CONDICIONAIS)
         # ==========================================
         elif st.session_state['slide_atual'] == 3:
             st.subheader("📋 Relatórios Consolidados de Carteira")
             aba1, aba2 = st.tabs(["Faturamento Geral da Carteira", "Apenas Clientes Novos Conquistados"])
 
             with aba1:
-                # Copia e prepara as colunas base
                 df_ret_disp = df_clean[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês atual']].copy()
                 df_ret_disp.columns = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês Atual']
                 
-                # Função interna para evitar divisões por zero com segurança
                 def calc_pct(atual, anterior):
                     if anterior > 0:
                         return ((atual - anterior) / anterior) * 100
                     return 0.0
 
-                # Geração das colunas de variação percentual
                 df_ret_disp['% Vs Retrasado'] = df_ret_disp.apply(lambda r: calc_pct(r['Ano Passado'], r['Ano Retrasado']), axis=1)
                 df_ret_disp['% Vs Passado'] = df_ret_disp.apply(lambda r: calc_pct(r['Mês Atual'], r['Ano Passado']), axis=1)
                 
-                # Reorganização das colunas para colocar a porcentagem logo ao lado do seu período
                 ordem_colunas = [
                     'Grupo Cliente', 
                     'Ano Retrasado', 
@@ -293,15 +289,31 @@ if arquivo_publicado is not None:
                 ]
                 df_ret_disp = df_ret_disp[ordem_colunas]
                 
-                # Exibição profissional com formatação monetária e percentual (+ ou -)
+                # 1. Função que injeta a Seta apropriada junto com o texto estruturado
+                def formatar_com_setas(val):
+                    if val > 0:
+                        return f"▲ +{val:.1f}%"
+                    elif val < 0:
+                        return f"▼ {val:.1f}%"
+                    return "0.0%"
+
+                # 2. Função de estilo CSS que pinta o texto e a seta na mesma cor
+                def colorir_celula_com_seta(val):
+                    if val > 0:
+                        return 'color: #137333; font-weight: bold;'  # Verde Escuro Executivo
+                    elif val < 0:
+                        return 'color: #c5221f; font-weight: bold;'  # Vermelho Alerta
+                    return 'color: #6c757d;'  # Cinza Neutro para estabilidade (0.0%)
+
+                # Renderização e acoplamento de estilo via Pandas Styler (.map)
                 st.dataframe(
                     df_ret_disp.style.format({
                         'Ano Retrasado': 'R$ {:,.2f}',
                         'Ano Passado': 'R$ {:,.2f}',
-                        '% Vs Retrasado': '{:+.1f}%',
                         'Mês Atual': 'R$ {:,.2f}',
-                        '% Vs Passado': '{:+.1f}%'
-                    }), 
+                        '% Vs Retrasado': formatar_com_setas,
+                        '% Vs Passado': formatar_com_setas
+                    }).map(colorir_celula_com_seta, subset=['% Vs Retrasado', '% Vs Passado']), 
                     use_container_width=True, 
                     hide_index=True
                 )
