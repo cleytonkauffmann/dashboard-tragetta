@@ -30,7 +30,7 @@ st.markdown("""
         .main-header h1 { margin: 0; font-size: 24px; color: white; line-height: 1.2; font-weight: 700; }
         .main-header p { margin: 5px 0 0 0; font-size: 14px; opacity: 0.9; }
         
-        .metric-card { background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #1E4620; }
+        .metric-card { background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #1E4620; min-height: 105px; }
         .metric-card.blue { border-left-color: #0275d8; }
         .metric-card.gold { border-left-color: #f0ad4e; }
         .metric-card.red { border-left-color: #c5221f; }
@@ -103,6 +103,7 @@ if arquivo_publicado is not None:
         df_clean['Ano Passado'] = df_clean['Ano Passado'].fillna(0).astype(float)
         df_clean['Ano Retrasado'] = df_clean['Ano Retrasado'].fillna(0).astype(float)
 
+        # Cálculos de novos e antigos
         df_clean['É Cliente Novo'] = (df_clean['Mês atual'] > 0) & (df_clean['Ano Passado'] == 0)
         df_novos = df_clean[df_clean['É Cliente Novo']]
         total_clientes_novos = df_novos.shape[0]
@@ -111,6 +112,10 @@ if arquivo_publicado is not None:
         faturamento_total = df_clean['Mês atual'].sum()
         faturamento_passado_total = df_clean['Ano Passado'].sum()
         faturamento_antigos = max(0.0, faturamento_total - faturamento_novos)
+        
+        # NOVOS CÁLCULOS: Total de Clientes Ativos Juntos (Novos + Antigos)
+        total_clientes_ativos = df_clean[df_clean['Mês atual'] > 0].shape[0]
+        total_clientes_antigos_ativos = total_clientes_ativos - total_clientes_novos
         
         if faturamento_passado_total > 0:
             crescimento_global = ((faturamento_total - faturamento_passado_total) / faturamento_passado_total) * 100
@@ -158,15 +163,17 @@ if arquivo_publicado is not None:
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 4</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 1: MÉTRICAS GERAIS E PIZZA
+        # SLIDE 1: MÉTRICAS GERAIS E PIZZA (ATUALIZADO COM TOTAL)
         # ==========================================
         if st.session_state['slide_atual'] == 1:
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             with c1: 
                 st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Mês Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">{sub_texto_crescimento}</div></div>', unsafe_allow_html=True)
-            with c2: 
-                st.markdown(f'<div class="metric-card blue"><div class="metric-title">Novos Clientes Conquistados</div><div class="metric-value">{total_clientes_novos} Novos</div><div class="metric-sub" style="color: #0275d8;">Clientes sem histórico no ano passado</div></div>', unsafe_allow_html=True)
+            with c2:
+                st.markdown(f'<div class="metric-card blue"><div class="metric-title">Total Clientes Ativos</div><div class="metric-value">{total_clientes_ativos} Clientes</div><div class="metric-sub" style="color: #0275d8;">{total_clientes_antigos_ativos} Antigos + {total_clientes_novos} Novos</div></div>', unsafe_allow_html=True)
             with c3: 
+                st.markdown(f'<div class="metric-card blue"><div class="metric-title">Novos Clientes Conquistados</div><div class="metric-value">{total_clientes_novos} Novos</div><div class="metric-sub" style="color: #0275d8;">Clientes sem histórico no ano passado</div></div>', unsafe_allow_html=True)
+            with c4: 
                 st.markdown(f'<div class="metric-card gold"><div class="metric-title">Receita de Clientes Novos</div><div class="metric-value">R$ {faturamento_novos:,.2f}</div><div class="metric-sub" style="color: #f0ad4e;">Impacto comercial das novas contas</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -195,7 +202,7 @@ if arquivo_publicado is not None:
                 """, unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 2: FOCO NO CLIENTE (RESTAURADO E COMPLETO)
+        # SLIDE 2: FOCO NO CLIENTE
         # ==========================================
         elif st.session_state['slide_atual'] == 2:
             st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
@@ -250,7 +257,7 @@ if arquivo_publicado is not None:
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (RESTAURADO E COMPLETO)
+        # SLIDE 3: RELATÓRIOS CONSOLIDADOS
         # ==========================================
         elif st.session_state['slide_atual'] == 3:
             st.subheader("📋 Relatórios Consolidados de Carteira")
@@ -296,12 +303,11 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (MÉTODO LIMPO E REMOVIDO)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
             
-            # Remove qualquer resquício antigo da coluna 'Nº' para evitar conflito de dados
             if 'Nº' in st.session_state['df_perdidos'].columns:
                 st.session_state['df_perdidos'] = st.session_state['df_perdidos'].drop(columns=['Nº'])
             
@@ -332,13 +338,12 @@ if arquivo_publicado is not None:
             st.markdown("<br>", unsafe_allow_html=True)
             st.success("✨ **Tabela Otimizada:** A coluna de numeração foi totalmente removida! Foque apenas em lançar as contas e motivos.")
             
-            # Tabela Editável Super Limpa (Opção A: Sem nenhuma coluna de numeração interna)
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=True,        # Mantém a visualização moderna e sem o índice cinzento lateral
-                key="editor_perdidos",  # Estabiliza a digitação
+                hide_index=True,        
+                key="editor_perdidos",  
                 column_config={
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
