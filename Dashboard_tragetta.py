@@ -88,6 +88,7 @@ if arquivo_publicado is not None:
         # Métricas Globais Dinâmicas
         faturamento_total = df_clean['Mês atual'].sum()
         faturamento_passado_total = df_clean['Ano Passado'].sum()
+        faturamento_antigos = max(0.0, faturamento_total - faturamento_novos)
         
         # Crescimento Global
         if faturamento_passado_total > 0:
@@ -106,6 +107,56 @@ if arquivo_publicado is not None:
             st.markdown(f'<div class="metric-card gold"><div class="metric-title">Receita de Clientes Novos</div><div class="metric-value">R$ {faturamento_novos:,.2f}</div><div class="metric-sub" style="color: #f0ad4e;">Impacto comercial das novas contas</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+
+        # NOVA SEÇÃO: GRÁFICO DE PIZZA (COMPOSIÇÃO ESTRATÉGICA)
+        st.subheader("📊 Composição da Receita Atual (Novos vs. Antigos)")
+        col_pizza, col_info_pizza = st.columns([3, 2])
+        
+        with col_pizza:
+            # Gráfico de Rosca profissional (Donut Chart)
+            fig_pizza = go.Figure(data=[go.Pie(
+                labels=['Clientes Antigos', 'Clientes Novos'],
+                values=[faturamento_antigos, faturamento_novos],
+                hole=.4, # Efeito rosca elegante
+                marker=dict(colors=['#1E4620', '#0275d8']), # Verde Institucional e Azul Conquista
+                textinfo='percent+label',
+                texttemplate='<b>%{label}</b><br>%{percent}',
+                insidetextorientation='horizontal'
+            )])
+            
+            fig_pizza.update_layout(
+                margin=dict(l=10, r=10, t=10, b=10),
+                height=300,
+                showlegend=False,
+                plot_bgcolor='white'
+            )
+            st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
+            
+        with col_info_pizza:
+            perc_novos = (faturamento_novos / faturamento_total * 100) if faturamento_total > 0 else 0
+            perc_antigos = (faturamento_antigos / faturamento_total * 100) if faturamento_total > 0 else 0
+            
+            st.markdown(f"""
+                <div style="margin-top: 25px;">
+                    <p style="font-size: 15px; margin-bottom: 8px;">🟩 <b>Clientes Antigos (Base Ativa):</b> {perc_antigos:.1f}% (R$ {faturamento_antigos:,.2f})</p>
+                    <p style="font-size: 15px; margin-bottom: 20px;">🟦 <b>Clientes Novos (Conquistas):</b> {perc_novos:.1f}% (R$ {faturamento_novos:,.2f})</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if total_clientes_novos > 0:
+                st.markdown(f"""
+                    <div class="status-box status-new">
+                        🚀 <b>Excelente Impacto Comercial!</b><br>Os novos clientes já são responsáveis por <b>{perc_novos:.1f}%</b> de todo o faturamento gerado no período corrente.
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                    <div class="status-box" style="background-color: #f8f9fa; color: #666; border-left: 5px solid #6c757d;">
+                        💡 <b>Foco em Retenção:</b> 100% do faturamento atual provém da sua base histórica de clientes cadastrados no ano passado.
+                    </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<br><hr>", unsafe_allow_html=True)
 
         # Filtro Individual por Cliente
         st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
