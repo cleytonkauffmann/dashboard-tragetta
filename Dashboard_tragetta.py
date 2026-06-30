@@ -11,9 +11,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Inicialização do Banco de Dados com a coluna 'Nº' manual e vazia por padrão
+# Inicialização do Banco de Dados - Tabela limpa e focada nos dados essenciais
 if 'df_perdidos' not in st.session_state:
-    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nº', 'Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
+    st.session_state['df_perdidos'] = pd.DataFrame(columns=['Nome do Cliente', 'Valor Mensal (R$)', 'Motivo da Perda'])
 
 # Estilização visual completa em CSS (Fonte Executiva Inter e Cores da Tragetta)
 st.markdown("""
@@ -75,7 +75,6 @@ if st.session_state['foto_b64']:
 else:
     avatar_html = '<div style="min-width:70px; max-width:70px; height:70px; background-color: rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin-right:20px;">👤</div>'
 
-# Identificação robusta do utilizador conectado
 usuario_email = "Consultor Comercial"
 if hasattr(st, "user") and hasattr(st.user, "email") and st.user.email:
     usuario_email = st.user.email
@@ -92,7 +91,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Inicialização do Controle de Slides
 if 'slide_atual' not in st.session_state:
     st.session_state['slide_atual'] = 1
 
@@ -181,14 +179,9 @@ if arquivo_publicado is not None:
                     values=[faturamento_antigos, faturamento_novos],
                     hole=.45, marker=dict(colors=['#1E4620', '#0275d8']), 
                     textinfo='percent', textposition='inside', 
-                    textfont=dict(size=14, color='white', weight='bold'),
-                    insidetextorientation='horizontal'
+                    textfont=dict(size=14, color='white', weight='bold')
                 )])
-                fig_pizza.update_layout(
-                    margin=dict(l=30, r=30, t=20, b=20), height=280, showlegend=True,  
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
-                    plot_bgcolor='white'
-                )
+                fig_pizza.update_layout(margin=dict(l=30, r=30, t=20, b=20), height=280, showlegend=True, plot_bgcolor='white')
                 st.plotly_chart(fig_pizza, use_container_width=True, config={'displayModeBar': False})
                 
             with col_info_pizza:
@@ -196,13 +189,13 @@ if arquivo_publicado is not None:
                 perc_antigos = (faturamento_antigos / faturamento_total * 100) if faturamento_total > 0 else 0
                 st.markdown(f"""
                     <div style="margin-top: 10px;">
-                        <p style="font-size: 14px; margin-bottom: 6px;">🟩 <b>Clientes Antigos:</b> {perc_antigos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_antigos:,.2f}</span>)</p>
-                        <p style="font-size: 14px; margin-bottom: 15px;">🟦 <b>Clientes Novos:</b> {perc_novos:.1f}% (<span style="font-family: monospace;">R$ {faturamento_novos:,.2f}</span>)</p>
+                        <p style="font-size: 14px; margin-bottom: 6px;">🟩 <b>Clientes Antigos:</b> {perc_antigos:.1f}% (R$ {faturamento_antigos:,.2f})</p>
+                        <p style="font-size: 14px; margin-bottom: 15px;">🟦 <b>Clientes Novos:</b> {perc_novos:.1f}% (R$ {faturamento_novos:,.2f})</p>
                     </div>
                 """, unsafe_allow_html=True)
 
         # ==========================================
-        # RESTAURADO 100% - SLIDE 2: FOCO NO CLIENTE
+        # SLIDE 2: FOCO NO CLIENTE (RESTAURADO E COMPLETO)
         # ==========================================
         elif st.session_state['slide_atual'] == 2:
             st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
@@ -257,7 +250,7 @@ if arquivo_publicado is not None:
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # RESTAURADO 100% - SLIDE 3: RELATÓRIOS CONSOLIDADOS
+        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (RESTAURADO E COMPLETO)
         # ==========================================
         elif st.session_state['slide_atual'] == 3:
             st.subheader("📋 Relatórios Consolidados de Carteira")
@@ -268,15 +261,13 @@ if arquivo_publicado is not None:
                 df_ret_disp.columns = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês Atual']
                 
                 def calc_pct(atual, anterior):
-                    if anterior > 0:
-                        return ((atual - anterior) / anterior) * 100
+                    if anterior > 0: return ((atual - anterior) / anterior) * 100
                     return 0.0
 
                 df_ret_disp['% Vs Retrasado'] = df_ret_disp.apply(lambda r: calc_pct(r['Ano Passado'], r['Ano Retrasado']), axis=1)
                 df_ret_disp['% Vs Passado'] = df_ret_disp.apply(lambda r: calc_pct(r['Mês Atual'], r['Ano Passado']), axis=1)
                 
-                ordem_colunas = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', '% Vs Retrasado', 'Mês Atual', '% Vs Passado']
-                df_ret_disp = df_ret_disp[ordem_colunas]
+                df_ret_disp = df_ret_disp[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', '% Vs Retrasado', 'Mês Atual', '% Vs Passado']]
                 
                 def formatar_com_setas(val):
                     if val > 0: return f"▲ +{val:.1f}%"
@@ -305,10 +296,14 @@ if arquivo_publicado is not None:
                     st.info("Nenhum cliente novo detectado nesta planilha.")
 
         # ==========================================
-        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (MANTIDO 100% CORRIGIDO E ESTÁVEL)
+        # SLIDE 4: AUDITORIA DE CLIENTES PERDIDOS (MÉTODO LIMPO E REMOVIDO)
         # ==========================================
         elif st.session_state['slide_atual'] == 4:
             st.subheader("❌ Auditoria Comercial de Clientes Perdidos (Churn)")
+            
+            # Remove qualquer resquício antigo da coluna 'Nº' para evitar conflito de dados
+            if 'Nº' in st.session_state['df_perdidos'].columns:
+                st.session_state['df_perdidos'] = st.session_state['df_perdidos'].drop(columns=['Nº'])
             
             df_validos = st.session_state['df_perdidos'].dropna(subset=['Nome do Cliente'])
             df_validos = df_validos[df_validos['Nome do Cliente'].astype(str).str.strip() != ""]
@@ -335,24 +330,22 @@ if arquivo_publicado is not None:
                 st.plotly_chart(fig_churn, use_container_width=True)
                 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.info("💡 **Como usar:** Clique em **'Add row'** (Adicionar linha). Agora você pode preencher a coluna **Nº** manualmente com a sua própria sequência!")
+            st.success("✨ **Tabela Otimizada:** A coluna de numeração foi totalmente removida! Foque apenas em lançar as contas e motivos.")
             
-            # Tabela Editável Ajustada (Sem loops de travamento e com numeração manual)
+            # Tabela Editável Super Limpa (Opção A: Sem nenhuma coluna de numeração interna)
             tabela_editavel = st.data_editor(
                 st.session_state['df_perdidos'],
                 num_rows="dynamic",
                 use_container_width=True,
-                hide_index=True,  # Oculta o índice cinza automático do Streamlit
-                key="editor_perdidos", # Garante estabilidade total enquanto você digita
+                hide_index=True,        # Mantém a visualização moderna e sem o índice cinzento lateral
+                key="editor_perdidos",  # Estabiliza a digitação
                 column_config={
-                    "Nº": st.column_config.TextColumn("Nº", help="Digite sua numeração manual aqui", width="small"),
                     "Nome do Cliente": st.column_config.TextColumn("Nome do Cliente", required=True),
                     "Valor Mensal (R$)": st.column_config.NumberColumn("Valor Mensal (R$)", format="R$ %.2f", min_value=0.0, default=0.0),
                     "Motivo da Perda": st.column_config.TextColumn("Motivo da Perda")
                 }
             )
             
-            # Sincroniza de forma passiva as alterações de volta para o session_state
             st.session_state['df_perdidos'] = tabela_editavel
 
     except Exception as e:
