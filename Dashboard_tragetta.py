@@ -125,7 +125,6 @@ if arquivo_publicado is not None:
                 2: "Slide 2: Foco no Cliente e Diagnóstico de Performance",
                 3: "Slide 3: Relatórios Consolidados da Carteira"
             }
-            # Dropdown integrado caso queira pular direto para um slide específico
             selecao = st.selectbox(
                 "Navegação Direta:", 
                 options=[1, 2, 3], 
@@ -146,10 +145,9 @@ if arquivo_publicado is not None:
         st.markdown(f"<div style='text-align: center; font-weight: bold; margin-bottom: 20px; color: #1E4620;'>Exibindo Módulo {st.session_state['slide_atual']} de 3</div>", unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 1: METRICAS GERAIS E PIZZA (image_65ba5d.png)
+        # SLIDE 1: METRICAS GERAIS E PIZZA
         # ==========================================
         if st.session_state['slide_atual'] == 1:
-            # Exibição dos Blocos Principais
             c1, c2, c3 = st.columns(3)
             with c1: 
                 st.markdown(f'<div class="metric-card"><div class="metric-title">Faturamento Mês Atual</div><div class="metric-value">R$ {faturamento_total:,.2f}</div><div class="metric-sub">{sub_texto_crescimento}</div></div>', unsafe_allow_html=True)
@@ -174,9 +172,7 @@ if arquivo_publicado is not None:
                     insidetextorientation='horizontal'
                 )])
                 fig_pizza.update_layout(
-                    margin=dict(l=30, r=30, t=20, b=20),
-                    height=280,
-                    showlegend=True,  
+                    margin=dict(l=30, r=30, t=20, b=20), height=280, showlegend=True,  
                     legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
                     plot_bgcolor='white'
                 )
@@ -207,7 +203,7 @@ if arquivo_publicado is not None:
                     """, unsafe_allow_html=True)
 
         # ==========================================
-        # SLIDE 2: FOCO NO CLIENTE (image_65bab6.png)
+        # SLIDE 2: FOCO NO CLIENTE
         # ==========================================
         elif st.session_state['slide_atual'] == 2:
             st.subheader("🔍 Foco no Cliente (Análise Executiva e Gráfico Histórico)")
@@ -267,16 +263,48 @@ if arquivo_publicado is not None:
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         # ==========================================
-        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (image_65bad6.png)
+        # SLIDE 3: RELATÓRIOS CONSOLIDADOS (COM % DENTRO DA TABELA)
         # ==========================================
         elif st.session_state['slide_atual'] == 3:
             st.subheader("📋 Relatórios Consolidados de Carteira")
             aba1, aba2 = st.tabs(["Faturamento Geral da Carteira", "Apenas Clientes Novos Conquistados"])
 
             with aba1:
+                # Copia e prepara as colunas base
                 df_ret_disp = df_clean[['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês atual']].copy()
                 df_ret_disp.columns = ['Grupo Cliente', 'Ano Retrasado', 'Ano Passado', 'Mês Atual']
-                st.dataframe(df_ret_disp.style.format({'Ano Retrasado': 'R$ {:,.2f}', 'Ano Passado': 'R$ {:,.2f}', 'Mês Atual': 'R$ {:,.2f}'}), use_container_width=True, hide_index=True)
+                
+                # Função interna para evitar divisões por zero com segurança
+                def calc_pct(atual, anterior):
+                    if anterior > 0:
+                        return ((atual - anterior) / anterior) * 100
+                    return 0.0
+
+                # Geração das colunas de variação percentual
+                df_ret_disp['% Vs Retrasado'] = df_ret_disp.apply(lambda r: calc_pct(r['Ano Passado'], r['Ano Retrasado']), axis=1)
+                df_ret_disp['% Vs Passado'] = df_ret_disp.apply(lambda r: calc_pct(r['Mês Atual'], r['Ano Passado']), axis=1)
+                
+                # Reorganização das colunas para colocar a porcentagem logo ao lado do seu período
+                ordem_colunas = [
+                    'Grupo Cliente', 
+                    'Ano Retrasado', 
+                    'Ano Passado', '% Vs Retrasado', 
+                    'Mês Atual', '% Vs Passado'
+                ]
+                df_ret_disp = df_ret_disp[ordem_colunas]
+                
+                # Exibição profissional com formatação monetária e percentual (+ ou -)
+                st.dataframe(
+                    df_ret_disp.style.format({
+                        'Ano Retrasado': 'R$ {:,.2f}',
+                        'Ano Passado': 'R$ {:,.2f}',
+                        '% Vs Retrasado': '{:+.1f}%',
+                        'Mês Atual': 'R$ {:,.2f}',
+                        '% Vs Passado': '{:+.1f}%'
+                    }), 
+                    use_container_width=True, 
+                    hide_index=True
+                )
 
             with aba2:
                 if total_clientes_novos > 0:
